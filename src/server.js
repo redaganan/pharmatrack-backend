@@ -4,9 +4,9 @@ import express from "express";
 
 import connectDB from "./config/database.js";
 
-import productRoutes from "./routes/productRoutes.js";
-import orderRoutes from "./routes/orderRoutes.js";
 import accountRoutes from "./routes/accountRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
+import productRoutes from "./routes/productRoutes.js";
 
 dotenv.config();
 connectDB();

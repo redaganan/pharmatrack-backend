@@ -2,8 +2,10 @@ import { model, Schema } from "mongoose";
 
 const orderSchema = new Schema(
 	{
+        orderId: String,
+        productId: String,
 		purchaseDate: Date,
-		products: { type: Schema.Types.ObjectId, ref: "Product" },
+		product: String,
 		totalAmount: Number,
 		quantity: Number,
 	},
