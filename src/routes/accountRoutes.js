@@ -6,5 +6,6 @@ const router = Router();
 
 router.post("/create-account", accountController.createAccount);
 router.post("/login", accountController.loginAccount);
+router.put("/change-password", accountController.changePassword);
 
 export default router;

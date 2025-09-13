@@ -7,6 +7,7 @@ import connectDB from "./config/database.js";
 import accountRoutes from "./routes/accountRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
+import dashboardRoutes from "./routes/dashboardRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -24,6 +25,7 @@ app.use(
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/accounts", accountRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 app.get("/", (_req, res) => {
 	res.send("server is ready");
