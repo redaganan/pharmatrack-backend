@@ -107,7 +107,7 @@ const notifySoonToExpireProducts = async (request, response) => {
 			},
 		});
 
-		const ownerEmail = process.env.OWNER_EMAIL || "sherwinlaguidao431@gmail.com";
+		const ownerEmail = process.env.OWNER_EMAIL || "gera.aganan.sjc@phinmaed.com";
 		const productList = soonToExpireProducts
 			.map(
 				(product) =>
