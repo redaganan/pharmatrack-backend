@@ -3,12 +3,23 @@ import { Order, Product } from "../models/index.js";
 const getDashboardData = async (request, response) => {
 	try {
 		const totalProducts = await Product.countDocuments();
-		const recentOrdersToday = await Order.find({
-			purchaseDate: {
-				$gte: new Date(new Date().setHours(0, 0, 0, 0)),
-				$lt: new Date(new Date().setHours(23, 59, 59, 999)),
+		// Sum total quantity of orders placed today
+		const recentOrdersTodayAgg = await Order.aggregate([
+			{
+				$match: {
+					purchaseDate: {
+						$gte: new Date(new Date().setHours(0, 0, 0, 0)),
+						$lt: new Date(new Date().setHours(23, 59, 59, 999)),
+					},
+				},
 			},
-		}).sort({ purchaseDate: -1 });
+			{
+				$group: {
+					_id: null,
+					totalQuantity: { $sum: "$quantity" },
+				},
+			},
+		]);
 		const totalProductsStock = await Product.aggregate([
 			{
 				$group: {
@@ -50,7 +61,7 @@ const getDashboardData = async (request, response) => {
 			data: {
 				totalProducts,
 				totalProductsStock: totalProductsStock[0]?.totalQuantity || 0,
-				recentOrdersToday: recentOrdersToday.length,
+				recentOrdersToday: recentOrdersTodayAgg[0]?.totalQuantity || 0,
 				soonToExpireProducts: soonToExpireProducts.map(
 					(product) => product.name
 				),
