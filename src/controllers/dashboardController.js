@@ -20,7 +20,7 @@ const getDashboardData = async (request, response) => {
 			},
 			{
 				$group: {
-					_id: null, 
+					_id: null,
 					totalQuantity: { $sum: "$quantity" },
 				},
 			},
