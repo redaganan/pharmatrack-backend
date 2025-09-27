@@ -9,22 +9,13 @@ const getDashboardData = async (request, response) => {
 	try {
 		const totalProducts = await Product.countDocuments();
 		// Sum total quantity of orders placed today
-		const recentOrdersTodayAgg = await Order.aggregate([
-			{
-				$match: {
-					purchaseDate: {
-						$gte: new Date(new Date().setHours(0, 0, 0, 0)),
-						$lt: new Date(new Date().setHours(23, 59, 59, 999)),
-					},
-				},
+		const recentOrdersToday = await Order.find({
+			purchaseDate: {
+				$gte: new Date(new Date().setHours(0, 0, 0, 0)),
+				$lt: new Date(new Date().setHours(23, 59, 59, 999)),
 			},
-			{
-				$group: {
-					_id: null,
-					totalQuantity: { $sum: "$quantity" },
-				},
-			},
-		]);
+		}).sort({ purchaseDate: -1 });
+        // Sum total stock quantity of all products
 		const totalProductsStock = await Product.aggregate([
 			{
 				$group: {
@@ -66,7 +57,7 @@ const getDashboardData = async (request, response) => {
 			data: {
 				totalProducts,
 				totalProductsStock: totalProductsStock[0]?.totalQuantity || 0,
-				recentOrdersToday: recentOrdersTodayAgg[0]?.totalQuantity || 0,
+				recentOrdersToday: recentOrdersToday.length || 0,
 				soonToExpireProducts: soonToExpireProducts.map(
 					(product) => product.name
 				),
