@@ -1,4 +1,4 @@
-import { Product } from "../models/index.js";
+import { Category, Product } from "../models/index.js";
 
 const getProduct = async (request, response) => {
 	try {
@@ -23,17 +23,22 @@ const getProduct = async (request, response) => {
 
 const createProduct = async (request, response) => {
 	try {
-		const { name, category, expiryDate, quantity, price } = request.body;
+		const { name, categoryId, expiryDate, quantity, price } = request.body;
 
-		if (!name || !category || !expiryDate || !quantity || !price) {
+		if (!name || !categoryId || !expiryDate || !quantity || !price) {
 			return response
 				.status(400)
 				.json({ message: "All fields are required" });
 		}
 
+		const category = await Category.findById(categoryId);
+		if (!category) {
+			return response.status(404).json({ message: "Category not found" });
+		}
+
 		const newProduct = new Product({
 			name,
-			category,
+			category: { _id: category._id, name: category.name },
 			expiryDate,
 			quantity,
 			price,
@@ -70,6 +75,16 @@ const updateProduct = async (request, response) => {
 				missing_fields: missingFields.map(([key]) => key),
 			});
 		}
+		const { categoryId } = updatedProductFields;
+
+		if (categoryId) {
+			const category = await Category.findById(categoryId);
+			if (!category) {
+				return response
+					.status(404)
+					.json({ message: "Category not found" });
+			}
+		}
 
 		Object.assign(product, updatedProductFields); // Update product fields
 		await product.save(); // Save the updated product
@@ -83,18 +98,18 @@ const updateProduct = async (request, response) => {
 };
 
 const deleteProduct = async (request, response) => {
-    try {
-        const { id } = request.query;
-        const product = await Product.findById(id);
-        if (!product) {
-            return response.status(404).json({ message: "Product not found" });
-        }
+	try {
+		const { id } = request.query;
+		const product = await Product.findById(id);
+		if (!product) {
+			return response.status(404).json({ message: "Product not found" });
+		}
 
-        await Product.findByIdAndDelete(id);
-        response.json({ message: "Product deleted successfully" });
-    } catch (error) {
-        response.status(500).json({ message: error.message });
-    }
+		await Product.findByIdAndDelete(id);
+		response.json({ message: "Product deleted successfully" });
+	} catch (error) {
+		response.status(500).json({ message: error.message });
+	}
 };
 
 export default {
