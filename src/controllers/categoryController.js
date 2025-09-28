@@ -65,11 +65,11 @@ const updateCategory = async (request, response) => {
 				.json({ message: "Category name is required" });
 		}
 
-        // Check if another category with the same name already exists (case-insensitive)
-        const existingCategory = await Category.findOne({
-            name: { $regex: `^${name}$`, $options: "i" },
-            _id: { $ne: id } // Exclude the current category from the search
-        });
+		// Check if another category with the same name already exists (case-insensitive)
+		const existingCategory = await Category.findOne({
+			name: { $regex: `^${name}$`, $options: "i" },
+			_id: { $ne: id }, // Exclude the current category from the search
+		});
 		if (existingCategory) {
 			return response
 				.status(400)
@@ -77,6 +77,13 @@ const updateCategory = async (request, response) => {
 		}
 		category.name = name;
 		await category.save();
+
+		// Update category name in all products referencing this category
+		await Product.updateMany(
+			{ "category._id": category._id },
+			{ $set: { "category.name": name } }
+		);
+
 		response.json(category);
 	} catch (error) {
 		response.status(500).json({ message: error.message });
