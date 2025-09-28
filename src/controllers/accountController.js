@@ -13,6 +13,16 @@ const createAccount = async (request, response) => {
 			});
 		}
 
+		const passwordRegex =
+			/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,20}$/;
+		if (!passwordRegex.test(password)) {
+			return response.status(400).json({
+				status: "error",
+				message:
+					"Password must be 8-20 characters long and contain at least one uppercase letter, one number, and one special character",
+			});
+		}
+
 		const existingEmail = await Account.findOne({ email });
 		if (existingEmail) {
 			return response.status(400).json({
@@ -72,7 +82,7 @@ const loginAccount = async (request, response) => {
 			status: "success",
 			message: "Login successful",
 			accountId: account._id,
-            username: account.username,
+			username: account.username,
 		});
 	} catch (error) {
 		response
@@ -83,7 +93,8 @@ const loginAccount = async (request, response) => {
 
 const changePassword = async (request, response) => {
 	try {
-		const { current_password, new_password, confirm_password } = request.body;
+		const { current_password, new_password, confirm_password } =
+			request.body;
 
 		const requiredFields = {
 			current_password,
@@ -113,18 +124,29 @@ const changePassword = async (request, response) => {
 				.json({ message: "Current password is incorrect" });
 		}
 
-        if (current_password === new_password) {
-            return response
-                .status(400)
-                .json({ message: "New password must be different from current password" });
-        }
-
-		if (new_password !== confirm_password) {
+		if (current_password === new_password) {
 			return response
 				.status(400)
 				.json({
-					message: "New password and confirm password do not match",
+					message:
+						"New password must be different from current password",
 				});
+		}
+
+		if (new_password !== confirm_password) {
+			return response.status(400).json({
+				message: "New password and confirm password do not match",
+			});
+		}
+
+		const passwordRegex =
+			/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,20}$/;
+		if (!passwordRegex.test(new_password)) {
+			return response.status(400).json({
+				status: "error",
+				message:
+					"Password must be 8-20 characters long and contain at least one uppercase letter, one number, and one special character",
+			});
 		}
 
 		account.password = new_password;
@@ -134,8 +156,6 @@ const changePassword = async (request, response) => {
 		response.status(500).json({ message: "Failed to change password" });
 	}
 };
-
-
 
 export default {
 	createAccount,
