@@ -109,7 +109,7 @@ const notifySoonToExpireProducts = async (request, response) => {
 			.join("\n");
 
 		const mailOptions = {
-			from: process.env.NOTIFY_EMAIL_USER,
+			from: process.env.OWNER_USER,
 			to: ownerEmail,
 			subject: "Soon-to-Expire Products Notification",
 			text:

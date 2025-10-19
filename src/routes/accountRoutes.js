@@ -7,5 +7,6 @@ const router = Router();
 router.post("/create-account", accountController.createAccount);
 router.post("/login", accountController.loginAccount);
 router.put("/change-password", accountController.changePassword);
+router.post("/login-otp", accountController.verifyLoginAccountOTP);
 
 export default router;
