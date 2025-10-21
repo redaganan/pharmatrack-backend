@@ -55,7 +55,7 @@ const createOrder = async (request, response) => {
 
 export const recentOrders = async (request, response) => {
     try {
-        const orders = await Order.find().sort({ createdAt: -1 }).limit(20); // Fetch the 20 most recent orders
+        const orders = await Order.find().sort({ createdAt: -1 }).limit(1000); // Fetch the 20 most recent orders
         response.status(200).json(orders);
     } catch (error) {
         response.status(500).json({ message: "Failed to fetch recent orders" });
