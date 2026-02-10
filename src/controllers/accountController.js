@@ -83,12 +83,17 @@ const loginAccount = async (request, response) => {
 			});
 		}
 
-        // Email setup (replace with actual credentials and owner email)
+        // Email setup
         const transporter = nodemailer.createTransport({
-            service: "gmail",
+            host: "smtp.gmail.com",
+            port: 587,
+            secure: false,
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS,
+            },
+            tls: {
+                rejectUnauthorized: false,
             },
         });
 
@@ -96,6 +101,13 @@ const loginAccount = async (request, response) => {
 			1000 + Math.random() * 9000
 		).toString();
 		const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // OTP valid for 10 minutes
+
+		// Log OTP to console so you can always see it even if email fails
+		console.log(`\n========================================`);
+		console.log(`  OTP for ${username}: ${createOTPCode}`);
+		console.log(`  Sending to: ${account.email}`);
+		console.log(`  Valid until: ${expiresAt.toLocaleTimeString()}`);
+		console.log(`========================================\n`);
 
 		const newOTP = new VerifyOTP({
 			user_id: account._id,
@@ -105,21 +117,44 @@ const loginAccount = async (request, response) => {
 		});
 		await newOTP.save();
 
-		// Send OTP email
-		const mailOptions = {
-			from: process.env.EMAIL_USER,
-			to: account.email,
-			subject: "Your OTP Code",
-			text: `Your OTP code is ${createOTPCode}. It is valid for 10 minutes.`,
-		};
+		// Send OTP email (don't let email failure block login)
+		let emailSent = false;
+		try {
+			const mailOptions = {
+				from: process.env.EMAIL_USER,
+				to: account.email,
+				subject: "PharmaTrack - Your OTP Code",
+				html: `
+					<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+						<h2 style="color: #f45b69;">PharmaTrack Login Verification</h2>
+						<p>Hello <strong>${username}</strong>,</p>
+						<p>Your OTP code is:</p>
+						<div style="background-color: #f5f5f5; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
+							<h1 style="color: #2c3e50; letter-spacing: 8px; margin: 0;">${createOTPCode}</h1>
+						</div>
+						<p>This code is valid for <strong>10 minutes</strong>.</p>
+						<p style="color: #888;">If you didn't request this code, please ignore this email.</p>
+					</div>
+				`,
+			};
 
-		await transporter.sendMail(mailOptions);
+			await transporter.sendMail(mailOptions);
+			emailSent = true;
+			console.log(`Email sent successfully to ${account.email}`);
+		} catch (emailError) {
+			console.error("Failed to send OTP email:", emailError.message);
+			console.log("Check your OTP in the console output above ^");
+		}
 
 		return response.status(200).json({
 			status: "success",
-			message: "Login successful",
+			message: emailSent
+				? "Login successful. OTP sent to your email."
+				: "Login successful. Email delivery failed — use the OTP shown below.",
 			accountId: account._id,
 			username: account.username,
+			emailSent,
+			...(!emailSent && { otp: createOTPCode }),
 		});
 	} catch (error) {
 		console.error("Login error:", error);
