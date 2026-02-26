@@ -55,9 +55,45 @@ const createOrder = async (request, response) => {
 
 export const recentOrders = async (request, response) => {
     try {
-        const orders = await Order.find().sort({ createdAt: -1 }).limit(1000); // Fetch the 20 most recent orders
-        response.status(200).json(orders);
+        const orders = await Order
+            .find()
+            .sort({ createdAt: -1 })
+            .limit(1000)
+            .lean(); // lean() returns plain objects so ALL stored fields are visible
+
+        const result = [];
+
+        for (const order of orders) {
+            // --- Mobile app order: cart-based with items[] array ---
+            if (Array.isArray(order.items) && order.items.length > 0) {
+                for (const item of order.items) {
+                    result.push({
+                        orderId: order.orderId || String(order._id),
+                        purchaseDate: order.purchaseDate || order.createdAt,
+                        product: item.productName || item.product || 'Unknown Product',
+                        productId: String(item.productId || ''),
+                        quantity: item.quantity ?? 0,
+                        price: item.price ?? 0,
+                        totalAmount: item.subtotal ?? item.totalAmount ?? 0,
+                    });
+                }
+            } else {
+                // --- Web app flat order ---
+                result.push({
+                    orderId: order.orderId || String(order._id),
+                    purchaseDate: order.purchaseDate || order.createdAt,
+                    product: order.product || 'Unknown Product',
+                    productId: String(order.productId || ''),
+                    quantity: order.quantity ?? order.qty ?? 0,
+                    price: order.price ?? 0,
+                    totalAmount: order.totalAmount ?? 0,
+                });
+            }
+        }
+
+        response.status(200).json(result);
     } catch (error) {
+        console.error('Failed to fetch recent orders:', error);
         response.status(500).json({ message: "Failed to fetch recent orders" });
     }
 };
