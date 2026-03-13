@@ -98,7 +98,60 @@ export const recentOrders = async (request, response) => {
     }
 };
 
+/**
+ * Create a batch order (multiple items in one transaction).
+ * Expects: { orderId, purchaseDate, items: [{ productId, product, quantity, price, totalAmount }] }
+ * Creates a single Order document with items[] populated.
+ */
+const createBatchOrder = async (request, response) => {
+    try {
+        const { orderId, purchaseDate, items } = request.body;
+
+        if (!orderId || !purchaseDate || !Array.isArray(items) || items.length === 0) {
+            return response.status(400).json({ message: "orderId, purchaseDate, and a non-empty items array are required" });
+        }
+
+        // Validate stock and deduct quantities for every item
+        for (const item of items) {
+            const productModel = await Product.findById(item.productId);
+            if (!productModel) {
+                return response.status(404).json({ message: `Product not found: ${item.product || item.productId}` });
+            }
+            if (item.quantity > productModel.quantity) {
+                return response.status(400).json({ message: `Insufficient stock for ${productModel.name || item.product}` });
+            }
+            productModel.quantity -= item.quantity;
+            await productModel.save();
+        }
+
+        // Build the items sub-documents matching the schema
+        const orderItems = items.map((i) => ({
+            productId: String(i.productId),
+            productName: i.product,
+            price: i.price,
+            quantity: i.quantity,
+            subtotal: i.totalAmount,
+        }));
+
+        const totalAmount = items.reduce((s, i) => s + (i.totalAmount || 0), 0);
+
+        const newOrder = new Order({
+            orderId,
+            purchaseDate,
+            items: orderItems,
+            totalAmount,
+        });
+
+        await newOrder.save();
+        response.status(201).json({ message: "Batch order created successfully", data: newOrder });
+    } catch (error) {
+        console.error('Failed to create batch order:', error);
+        response.status(500).json({ message: "Failed to create batch order" });
+    }
+};
+
 export default {
     createOrder,
+    createBatchOrder,
     recentOrders,
 };
