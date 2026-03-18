@@ -1,7 +1,10 @@
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import bcrypt from "bcrypt";
 
 import { Account, VerifyOTP } from "../models/index.js";
+
+const SALT_ROUNDS = 10;
 
 import isValidEmail from "../utils/validEmail.js";
 
@@ -49,7 +52,8 @@ const createAccount = async (request, response) => {
 			});
 		}
 
-		const newAccount = new Account({ username, email, password });
+		const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+		const newAccount = new Account({ username, email, password: hashedPassword });
 		await newAccount.save();
 		return response.status(201).json({
 			status: "success",
@@ -74,9 +78,17 @@ const loginAccount = async (request, response) => {
 			});
 		}
 
-		const account = await Account.findOne({ username, password });
+		const account = await Account.findOne({ username });
 
 		if (!account) {
+			return response.status(401).json({
+				status: "error",
+				message: "Invalid username or password",
+			});
+		}
+
+		const isPasswordValid = await bcrypt.compare(password, account.password);
+		if (!isPasswordValid) {
 			return response.status(401).json({
 				status: "error",
 				message: "Invalid username or password",
@@ -191,7 +203,8 @@ const changePassword = async (request, response) => {
 			return response.status(404).json({ message: "Account not found" });
 		}
 
-		if (account.password !== current_password) {
+		const isCurrentPasswordValid = await bcrypt.compare(current_password, account.password);
+		if (!isCurrentPasswordValid) {
 			return response
 				.status(401)
 				.json({ message: "Current password is incorrect" });
@@ -219,11 +232,68 @@ const changePassword = async (request, response) => {
 			});
 		}
 
-		account.password = new_password;
+		const hashedNewPassword = await bcrypt.hash(new_password, SALT_ROUNDS);
+		account.password = hashedNewPassword;
 		await account.save();
 		response.status(200).json({ message: "Password changed successfully" });
 	} catch (error) {
 		response.status(500).json({ message: "Failed to change password" });
+	}
+};
+
+const changeUsername = async (request, response) => {
+	try {
+		const { username } = request.body;
+		const { accountId } = request.query;
+
+		if (!accountId) {
+			return response
+				.status(400)
+				.json({ status: "error", message: "Account ID is required" });
+		}
+
+		const trimmedUsername = username?.trim();
+		if (!trimmedUsername) {
+			return response.status(400).json({
+				status: "error",
+				message: "Username is required",
+			});
+		}
+
+		const account = await Account.findById(accountId);
+		if (!account) {
+			return response
+				.status(404)
+				.json({ status: "error", message: "Account not found" });
+		}
+
+		if (account.username === trimmedUsername) {
+			return response.status(400).json({
+				status: "error",
+				message: "New username must be different from current username",
+			});
+		}
+
+		const existingUsername = await Account.findOne({ username: trimmedUsername });
+		if (existingUsername && existingUsername._id.toString() !== accountId) {
+			return response.status(400).json({
+				status: "error",
+				message: "Username is already taken",
+			});
+		}
+
+		account.username = trimmedUsername;
+		await account.save();
+
+		return response.status(200).json({
+			status: "success",
+			message: "Username changed successfully",
+			username: account.username,
+		});
+	} catch (error) {
+		return response
+			.status(500)
+			.json({ status: "error", message: "Failed to change username" });
 	}
 };
 
@@ -287,5 +357,6 @@ export default {
 	createAccount,
 	loginAccount,
 	changePassword,
+	changeUsername,
 	verifyLoginAccountOTP,
 };
